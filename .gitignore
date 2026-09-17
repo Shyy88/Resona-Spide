@@ -1,0 +1,48 @@
+# Robot Framework execution output
+results/
+*.pyc
+__pycache__/
+log.html
+report.html
+output.xml
+
+# Output dengan --timestampoutputs (mis. output-20260914-133419.xml).
+# Pola di atas tidak menangkap ini karena namanya bukan "output.xml" persis.
+log-*.html
+report-*.html
+output-*.xml
+xunit*.xml
+
+# Log internal browser driver, otomatis dibuat SeleniumLibrary tiap
+# "Open Browser" dan indexnya terus bertambah tiap run (geckodriver-1.log,
+# geckodriver-2.log, dst).
+geckodriver-*.log
+chromedriver-*.log
+msedgedriver-*.log
+*.log
+
+# Artefak hasil test (screenshot & rekaman video dari ScreenCapLibrary)
+screenshots/
+videos/
+*.png
+*.webm
+*.mp4
+
+# Cache driver dari webdriver-manager
+.wdm/
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jangan pernah commit file .env asli — hanya .env.example yang boleh masuk git
+.env
+!.env.example

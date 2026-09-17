@@ -1,0 +1,12 @@
+CUSTOMERS:
+  - CIF: "321567"
+    EMAIL_ADDRESS: "test1@example.com"
+    ACCOUNT_NUMBER: "07463992-115"
+
+  - CIF: "321568"
+    EMAIL_ADDRESS: "test2@example.com"
+    ACCOUNT_NUMBER: "07463992-116"
+
+  - CIF: "321569"
+    EMAIL_ADDRESS: "test3@example.com"
+    ACCOUNT_NUMBER: "07463992-117"

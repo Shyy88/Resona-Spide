@@ -1,0 +1,19 @@
+# Dependency untuk menjalankan test suite Resona Spide.
+#
+# meng-import "Library    SeleniumLibrary", dan data/*.yaml butuh PyYAML
+# untuk bisa dibaca Robot Framework sebagai Variables file.
+# Tanpa paket-paket ini, test tidak akan bisa jalan sama sekali
+# (akan error "Importing library 'SeleniumLibrary' failed").
+
+robotframework==7.4.2
+robotframework-seleniumlibrary>=6.5.0
+selenium>=4.20.0
+robotframework-screencaplibrary==1.6.0
+PyYAML>=6.0
+
+# webdriver-manager: auto-download & cocokkan geckodriver/chromedriver/dll
+# dengan versi browser yang terpasang, dipakai oleh
+# resource/webdriver_setup.py (dipanggil dari resource/config.resource,
+# keyword "Open Application"). Tanpa ini, "Get Driver Path" akan error
+# ModuleNotFoundError saat Suite Setup.
+webdriver-manager>=4.0.0
