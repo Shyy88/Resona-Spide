@@ -17,17 +17,33 @@ Resource            ../config.resource
 ${MENU_CUSTOMER_LI}                    //li[@id='Main_mnuCustomer']
 ${MENU_CUSTOMER}                       //li[@id='Main_mnuCustomer']/a
 ${MENU_CUSTOMER_MASS_MAINTENANCE}      //a[@id='Main_mnuMassMaintenance']
+${MENU_DASHBOARD}                      //a[@href='../Home/Home.aspx']
 
 ### Customer Mass Maintenance Page ###
 ${HEADER_CUSTOMER_MASS_MAINTENANCE}    (//h1[@class='title m-0'])[1]
 ${BROWSE_FILE}                         //input[@id='Main_fuBrowse']
 ${BTN_UPLOAD_FILE}                     id=ctl00_Main_rbUpload
 
-${UPLOAD_FILE_XLSX}                    ${EXECDIR}${/}data${/}Uploads${/}CustomerMaintenance2.xlsx
+${UPLOAD_FILE_XLSX}                    ${EXECDIR}${/}data${/}Uploads${/}CustomerMaintenance.xlsx
 ${UPLOAD_FILE_ALREADY_EXIST}           ${EXECDIR}${/}data${/}Uploads${/}CustomerMaintc_03.xlsx
 
 
 *** Keywords ***
+
+Kembali Ke Dashboard
+    [Documentation]    Reset state halaman ke Dashboard sebelum membuka menu Customer, dengan
+    ...                klik link "Dashboard" di top nav (<a href="../Home/Home.aspx">, lihat
+    ...                hasil inspect DevTools: elemen ini ada di dalam <ol id="top-nav">).
+    ...                PENTING: dibutuhkan karena elemen sidebar (Main_mnuCustomer) cuma ada
+    ...                di view Dashboard. Kalau test sebelumnya berakhir di halaman module lain
+    ...                (mis. Mass Maintenance) dan Test Setup langsung coba "Open Customer Menu"
+    ...                tanpa reset dulu, sidebar-nya sudah tidak ada di DOM dan
+    ...                "Wait Until Element Is Visible" akan timeout/gagal.
+
+    Switch To Dashboard Frame
+    Wait Until Element Is Visible    ${MENU_DASHBOARD}    ${TIMEOUT}
+    Click Element    ${MENU_DASHBOARD}
+    Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    ${TIMEOUT}
 
 Open Customer Menu
     [Documentation]    Membuka (expand) menu "Customer" di sidebar kalau belum dalam kondisi
@@ -43,7 +59,11 @@ Open Customer Menu
     END
 
 Go To Customer Mass Maintenance
-    [Documentation]    Navigasi ke halaman Customer > Mass Maintenance.
+    [Documentation]    Navigasi ke halaman Customer > Mass Maintenance. Selalu diawali balik
+    ...                ke Dashboard dulu (lihat "Kembali Ke Dashboard") supaya navigasi ini
+    ...                konsisten baik dipanggil dari state awal (Dashboard segar) maupun dari
+    ...                state sisa test case sebelumnya (mis. masih di halaman Mass Maintenance).
+    Kembali Ke Dashboard
     Open Customer Menu
     Click Element    ${MENU_CUSTOMER_MASS_MAINTENANCE}
 
