@@ -13,6 +13,7 @@ Resource            ../config.resource
 ${MENU_CUSTOMER_LI}                 //li[@id='Main_mnuCustomer']
 ${MENU_CUSTOMER}                    //li[@id='Main_mnuCustomer']/a
 ${MENU_CUSTOMER_MAINTENANCE}        //a[@id='Main_mnuMaintenance']
+${MENU_DASHBOARD}                   //a[@href='../Home/Home.aspx']
 
 #### CUSTOMER MAINTENANCE PAGE ###
 ${HEADER_CUSTOMER_INFORMATION}      (//h4[@class='panel-title text-success'])[2]
@@ -25,6 +26,7 @@ ${CUSTOMER_NAME}                      //span[@id='Main_lblName']
 ${CUSTOMER_ACCOUNT_TABLE}             //table[@id='ctl00_Main_rgAccount_ctl00']
 
 ### Edit Account Customer with Add Email ###
+${EMAIL_POPUP_FRAME}                //iframe[@name='PopUpWindow']
 ${EMAIL_GRID_TABLE}                 //table[@id='ctl00_Main_gridEmail_ctl00']
 ${BTN_ADD_EMAIL_ROW}                //span[@id='ctl00_Main_rbAdd']
 ${BTN_REMOVE_EMAIL_ROW}             //span[@id='ctl00_Main_rbDelete']
@@ -32,38 +34,111 @@ ${CHECKBOX_EMAIL_LAST_ROW}          (//table[@id='ctl00_Main_gridEmail_ctl00']//
 ${INPUT_NEW_EMAIL_LAST_ROW}         (//table[@id='ctl00_Main_gridEmail_ctl00']//input[contains(@id,'tbNewEmail')])[last()]
 ${BTN_SAVE_EMAIL}                   //span[@id='ctl00_Main_rbSave']
 
-### After Save Email ###
+### After Save Email Open Detail Email ###
 ${EMAIL_DETAIL_TABLE}              //div[@id='ctl00_Main_gridEmail_GridData']
 ${BTN_CLOSE_EMAIL_DETAIL}          //span[@id='ctl00_Main_rbClose']
 
+### Submit Changes ###
+${BTN_SUBMIT_CHANGES}              //span[@id='ctl00_Main_rbSave']
 
 *** Keywords ***
+
+Klik Elemen Dengan Javascript
+    [Documentation]    Klik elemen via JavaScript (element.click()), bypass pengecekan
+    ...                overlap/visibility Selenium. Dipakai untuk elemen di baris top-nav yang
+    ...                ketutupan <div class="col-sm-12"> -- kemungkinan besar itu container
+    ...                widget/card Dashboard, yang cuma nutupin baris nav SELAGI konten
+    ...                Dashboard masih ditampilkan (begitu pindah halaman, area nav bersih).
+    [Arguments]    ${locator}
+    ${element}=    Get WebElement    ${locator}
+    Execute Javascript    arguments[0].click();    ARGUMENTS    ${element}
+
+Kembali Ke Dashboard
+    [Documentation]    Reset state halaman ke Dashboard sebelum membuka menu Customer -- TAPI
+    ...                cuma kalau belum di Dashboard. Kalau sidebar (Main_mnuCustomer) sudah
+    ...                visible, berarti kita SUDAH di Dashboard (mis. baru saja login), jadi
+    ...                skip klik sama sekali -- gak perlu, dan menghindari klik redundan di
+    ...                zona rawan overlap (lihat "Klik Elemen Dengan Javascript").
+    Switch To Dashboard Frame
+    ${sudah_di_dashboard}=    Run Keyword And Return Status
+    ...    Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    3s
+    IF    not ${sudah_di_dashboard}
+        Wait Until Element Is Visible    ${MENU_DASHBOARD}    ${TIMEOUT}
+        Klik Elemen Dengan Javascript    ${MENU_DASHBOARD}
+        Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    ${TIMEOUT}
+    END
 
 Open Customer Menu
     [Documentation]    Membuka (expand) menu "Customer" di sidebar kalau belum dalam kondisi
     ...                expanded. Menu dianggap sudah terbuka kalau <li id="Main_mnuCustomer">
-    ...                punya class "active" (lihat hasil inspect: class="hasChild active").
+    ...                punya class "active". Klik pakai JS karena langkah ini SELALU terjadi
+    ...                selagi konten Dashboard masih tampil (zona rawan overlap).
     Switch To Dashboard Frame
     Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    ${TIMEOUT}
     ${classes}=    Get Element Attribute    ${MENU_CUSTOMER_LI}    class
     ${is_open}=    Run Keyword And Return Status    Should Contain    ${classes}    active
     IF    not ${is_open}
-        Click Element    ${MENU_CUSTOMER}
+        Klik Elemen Dengan Javascript    ${MENU_CUSTOMER}
         Wait Until Element Is Visible    ${MENU_CUSTOMER_MAINTENANCE}    ${TIMEOUT}
     END
 
 Go To Customer Maintenance
-    [Documentation]    Navigasi ke halaman Customer > Maintenance.
+    [Documentation]    Navigasi ke halaman Customer > Maintenance. Selalu diawali balik ke
+    ...                Dashboard dulu (lihat "Kembali Ke Dashboard") supaya konsisten baik
+    ...                dipanggil dari state awal maupun dari state sisa test case sebelumnya.
+    Kembali Ke Dashboard
     Open Customer Menu
     Click Element    ${MENU_CUSTOMER_MAINTENANCE}
 
+Search Customer By CIF
+    [Documentation]    Isi CIF di kolom pencarian lalu klik Search, kemudian menunggu data
+    ...                customer (CIF & Name) muncul sebagai konfirmasi pencarian berhasil.
+    [Arguments]    ${cif}
+    Wait Until Element Is Visible    ${INPUT_CIF}    ${TIMEOUT}
+    Input Text    ${INPUT_CIF}    ${cif}
+    Click Element    ${BTN_SEARCH}
+    Wait Until Element Is Visible    ${CUSTOMER_CIF}    ${TIMEOUT}
+
 Click Edit Email Icon
-    [Documentation]    Klik ikon edit email pada baris dengan Account No tertentu di grid Account Information.
+    [Documentation]    Klik ikon edit email (pensil) pada baris dengan Account No tertentu di
+    ...                grid Account Information, lalu SWITCH ke iframe "PopUpWindow" tempat
+    ...                popup Detail (Add/Remove/Current Email/New Email/Save/Close) dirender
+    ...                (halaman EmailDetail.aspx?Type=Edit...). PENTING: iframe ini nested DI
+    ...                DALAM frame Home/Home.aspx (bukan di top-level document), jadi kita
+    ...                TETAP di context frame Home/Home.aspx (tidak perlu Unselect Frame),
+    ...                cukup Select Frame langsung ke iframe PopUpWindow ini.
     [Arguments]    ${account_no}
     ${locator}=    Set Variable
     ...    ${CUSTOMER_ACCOUNT_TABLE}//tr[td[normalize-space()='${account_no}']]//a[contains(@class,'sprites-16-edit')]
     Wait Until Element Is Visible    ${locator}    ${TIMEOUT}
-    Click Element    ${locator}
+    Klik Elemen Dengan Javascript    ${locator}
+    Wait Until Element Is Visible    ${EMAIL_POPUP_FRAME}    ${TIMEOUT}
+    Select Frame    ${EMAIL_POPUP_FRAME}
+    Wait Until Element Is Visible    ${EMAIL_GRID_TABLE}    ${TIMEOUT}
+
+Click Email Count Link
+    [Documentation]    Klik link "Detail Email" (angka di kolom "Email Address") pada baris
+    ...                dengan Account No tertentu -- membuka popup DETAIL EMAIL (view). Popup
+    ...                ini kemungkinan pakai RadWindow + iframe yang sama dengan popup Edit
+    ...                (PopUpWindow), cuma src beda (Type=View), jadi perlu Select Frame lagi
+    ...                ke situ sebelum mencari ${EMAIL_DETAIL_TABLE}.
+    [Arguments]    ${account_no}
+    ${locator}=    Set Variable
+    ...    ${CUSTOMER_ACCOUNT_TABLE}//tr[td[normalize-space()='${account_no}']]//a[contains(@id,'lbEmailCount')]
+    Wait Until Element Is Visible    ${locator}    ${TIMEOUT}
+    Klik Elemen Dengan Javascript    ${locator}
+    Wait Until Element Is Visible    ${EMAIL_POPUP_FRAME}    ${TIMEOUT}
+    Select Frame    ${EMAIL_POPUP_FRAME}
+    Wait Until Element Is Visible    ${EMAIL_DETAIL_TABLE}    ${TIMEOUT}
+
+Close Email Detail
+    [Documentation]    Klik tombol "Close" pada popup Detail Email (masih di dalam iframe
+    ...                PopUpWindow), lalu KEMBALI ke frame Dashboard -- supaya konteks frame
+    ...                bersih untuk test/langkah berikutnya, sama seperti pola di
+    ...                "Save Email Changes".
+    Wait Until Element Is Visible    ${BTN_CLOSE_EMAIL_DETAIL}    ${TIMEOUT}
+    Klik Elemen Dengan Javascript    ${BTN_CLOSE_EMAIL_DETAIL}
+    Switch To Dashboard Frame
 
 Input New Email By Current Email
     [Documentation]    Isi New Email pada baris grid Email yang match dengan Current Email
@@ -110,32 +185,29 @@ Tambah Email Baru
     Wait Until Element Is Enabled    ${INPUT_NEW_EMAIL_LAST_ROW}    ${TIMEOUT}
     Input Text    ${INPUT_NEW_EMAIL_LAST_ROW}    ${new_email}
 
-Click Email Count Link
-    [Documentation]    Klik link jumlah email (kolom "Email Address") pada baris dengan
-    ...                Account No tertentu di grid Account Information, untuk membuka popup
-    ...                "Detail" berisi grid Email. Locator dibuat dinamis berdasarkan Account No
-    ...                (BUKAN hardcode index baris seperti "ctl05"), supaya tidak salah sasaran
-    ...                kalau posisi/jumlah baris di grid berubah.
-    [Arguments]    ${account_no}
-    ${locator}=    Set Variable
-    ...    ${CUSTOMER_ACCOUNT_TABLE}//tr[td[normalize-space()='${account_no}']]//a[contains(@id,'lbEmailCount')]
-    Wait Until Element Is Visible    ${locator}    ${TIMEOUT}
-    Click Element    ${locator}
-    Wait Until Element Is Visible    ${EMAIL_DETAIL_TABLE}    ${TIMEOUT}
-
 Save Email Changes
-    [Documentation]    Klik tombol "Save" pada popup Detail Email untuk menyimpan perubahan
-    ...                (email baru / email yang diupdate), lalu verifikasi alert konfirmasi
-    ...                yang muncul setelahnya (alert otomatis di-accept setelah teks match,
-    ...                cuma 1 alert -- beda dari flow Mass Maintenance yang ada 2 alert).
+    [Documentation]    Klik tombol "Save" pada popup Detail Email (masih di dalam iframe
+    ...                PopUp) untuk menyimpan perubahan, verifikasi alert konfirmasi, lalu
+    ...                KEMBALI ke frame Dashboard -- karena popup ini otomatis tertutup
+    ...                setelah Save, dan langkah selanjutnya (Click Email Count Link) perlu
+    ...                mengakses grid Account yang ada di level Dashboard, bukan di iframe ini.
     Wait Until Element Is Visible    ${BTN_SAVE_EMAIL}    ${TIMEOUT}
     Click Element    ${BTN_SAVE_EMAIL}
     Alert Should Be Present    text=Are you sure you want to save changes?    timeout=${TIMEOUT}
+    Switch To Dashboard Frame
 
-Close Email Detail
-    [Documentation]    Klik tombol "Close" pada popup Detail Email, lalu menunggu popup-nya
-    ...                benar-benar hilang dari DOM (grid Email tidak lagi visible) supaya test
-    ...                selanjutnya tidak nyangkut di state popup ini.
-    Wait Until Element Is Visible    ${BTN_CLOSE_EMAIL_DETAIL}    ${TIMEOUT}
-    Click Element    ${BTN_CLOSE_EMAIL_DETAIL}
-    Wait Until Element Is Not Visible    ${EMAIL_DETAIL_TABLE}    ${TIMEOUT}
+Submit Changes For Approval
+    [Documentation]    Klik tombol "Save"/Submit di halaman Customer Maintenance (bukan di
+    ...                dalam popup Email) untuk mengirim perubahan ke approval. Muncul 2 alert
+    ...                berurutan: alert pertama konfirmasi submit (teks belum diverifikasi,
+    ...                masih di-accept generik), alert kedua pesan sukses "Update successfully
+    ...                processed to approval" yang divalidasi teksnya.
+    ...                Catatan: TIDAK pakai Scroll Element Into View -- sempat dicoba tapi
+    ...                menyebabkan MoveTargetOutOfBoundsException (bug geckodriver saat
+    ...                menghitung posisi scroll). Tidak diperlukan juga karena kliknya lewat
+    ...                JavaScript (element.click()), yang tidak butuh elemen berada dalam
+    ...                viewport seperti klik native Selenium.
+    Wait Until Element Is Visible    ${BTN_SUBMIT_CHANGES}    ${TIMEOUT}
+    Klik Elemen Dengan Javascript    ${BTN_SUBMIT_CHANGES}
+    Handle Alert    action=ACCEPT    timeout=${TIMEOUT}
+    Alert Should Be Present    text=Update successfully processed to approval    timeout=${TIMEOUT}
