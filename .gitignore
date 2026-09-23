@@ -44,5 +44,3 @@ venv/
 Thumbs.db
 
 # Jangan pernah commit file .env asli — hanya .env.example yang boleh masuk git
-.env
-!.env.example
