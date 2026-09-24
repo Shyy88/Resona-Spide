@@ -30,20 +30,30 @@ ${UPLOAD_FILE_ALREADY_EXIST}           ${EXECDIR}${/}data${/}Uploads${/}Customer
 
 *** Keywords ***
 
-Kembali Ke Dashboard
-    [Documentation]    Reset state halaman ke Dashboard sebelum membuka menu Customer, dengan
-    ...                klik link "Dashboard" di top nav (<a href="../Home/Home.aspx">, lihat
-    ...                hasil inspect DevTools: elemen ini ada di dalam <ol id="top-nav">).
-    ...                PENTING: dibutuhkan karena elemen sidebar (Main_mnuCustomer) cuma ada
-    ...                di view Dashboard. Kalau test sebelumnya berakhir di halaman module lain
-    ...                (mis. Mass Maintenance) dan Test Setup langsung coba "Open Customer Menu"
-    ...                tanpa reset dulu, sidebar-nya sudah tidak ada di DOM dan
-    ...                "Wait Until Element Is Visible" akan timeout/gagal.
+Klik Elemen Dengan Javascript
+    [Documentation]    Klik elemen via JavaScript (element.click()), bypass pengecekan
+    ...                overlap/visibility Selenium. Dipakai untuk elemen di baris top-nav yang
+    ...                ketutupan <div class="col-sm-12"> -- kemungkinan besar itu container
+    ...                widget/card Dashboard, yang cuma nutupin baris nav SELAGI konten
+    ...                Dashboard masih ditampilkan (begitu pindah halaman, area nav bersih).
+    [Arguments]    ${locator}
+    ${element}=    Get WebElement    ${locator}
+    Execute Javascript    arguments[0].click();    ARGUMENTS    ${element}
 
+Kembali Ke Dashboard
+    [Documentation]    Reset state halaman ke Dashboard sebelum membuka menu Customer -- TAPI
+    ...                cuma kalau belum di Dashboard. Kalau sidebar (Main_mnuCustomer) sudah
+    ...                visible, berarti kita SUDAH di Dashboard (mis. baru saja login), jadi
+    ...                skip klik sama sekali -- gak perlu, dan menghindari klik redundan di
+    ...                zona rawan overlap (lihat "Klik Elemen Dengan Javascript").
     Switch To Dashboard Frame
-    Wait Until Element Is Visible    ${MENU_DASHBOARD}    ${TIMEOUT}
-    Click Element    ${MENU_DASHBOARD}
-    Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    ${TIMEOUT}
+    ${sudah_di_dashboard}=    Run Keyword And Return Status
+    ...    Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    3s
+    IF    not ${sudah_di_dashboard}
+        Wait Until Element Is Visible    ${MENU_DASHBOARD}    ${TIMEOUT}
+        Klik Elemen Dengan Javascript    ${MENU_DASHBOARD}
+        Wait Until Element Is Visible    ${MENU_CUSTOMER_LI}    ${TIMEOUT}
+    END
 
 Open Customer Menu
     [Documentation]    Membuka (expand) menu "Customer" di sidebar kalau belum dalam kondisi

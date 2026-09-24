@@ -26,8 +26,12 @@ Upload File Mass Registration Berhasil
     Upload Mass Registration File    ${UPLOAD_FILE_XLSX}
     Verify Mass Registration Upload Result    ${UPLOAD FILE REGISTRATION SUCCESS MESSAGE}
 
-
-
+Upload File Mass Maintenance Gagal Karena Data Sudah Ada
+    [Documentation]    Memastikan upload file .xlsx yang datanya (email/account) sudah
+    ...                pernah di-upload sebelumnya ditolak, dengan pesan error yang sesuai.
+    [Tags]    negative
+    Upload Mass Registration File    ${UPLOAD_FILE_ALREADY_EXIST}
+    Verify Mass Registration Upload Result    ${DATA UPLOAD FILE ALREADY EXIST MESSAGE}
 
 *** Keywords ***
 Login Sebagai Maker
