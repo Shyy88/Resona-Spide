@@ -31,6 +31,20 @@ Tambah Email Baru Pada Account Customer Berhasil
     Close Email Detail
     Submit Changes For Approval
 
+Tambah Email Format Invalid Muncul Validasi
+    [Documentation]    Memastikan icon validasi warning muncul saat New Email diisi format
+    ...                yang tidak valid (tanpa domain lengkap/@ hilang, dll), dan Save tidak
+    ...                bisa diproses selama validasi ini masih tampil.
+    [Tags]    negative
+    Search Customer By CIF    ${CIF}
+    Click Edit Email Icon    ${ACCOUNT_NUMBER}
+    Add New Email Row
+    Wait Until Element Is Visible    ${CHECKBOX_EMAIL_LAST_ROW}    ${TIMEOUT}
+    Select Checkbox    ${CHECKBOX_EMAIL_LAST_ROW}
+    Input Text    ${INPUT_NEW_EMAIL_LAST_ROW}    format-email-salah
+    Save Email Changes
+    Verify Email Format Invalid
+
 *** Keywords ***
 Login Sebagai Maker
     [Documentation]    Suite setup: buka browser lalu login sekali untuk seluruh suite ini

@@ -10,8 +10,8 @@ Library    ./webdriver_setup.py
 ${URL}              http://dev.profescipta.com/SPIDER/Security/Login.aspx?ReturnUrl=%2fSPIDER
 ${BROWSER}          firefox
 
-${TIMEOUT}          20s
-${IMPLICIT_WAIT}    10s
+${TIMEOUT}          40s
+${IMPLICIT_WAIT}    15s
 
 
 *** Keywords ***

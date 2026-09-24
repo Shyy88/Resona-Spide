@@ -41,6 +41,9 @@ ${BTN_CLOSE_EMAIL_DETAIL}          //span[@id='ctl00_Main_rbClose']
 ### Submit Changes ###
 ${BTN_SUBMIT_CHANGES}              //span[@id='ctl00_Main_rbSave']
 
+### Validasi Format Email ###
+${EMAIL_VALIDATION_MSG_LAST_ROW}    (//table[@id='ctl00_Main_gridEmail_ctl00']//span[@class='Validation'])[last()]
+
 *** Keywords ***
 
 Klik Elemen Dengan Javascript
@@ -187,13 +190,15 @@ Tambah Email Baru
 
 Save Email Changes
     [Documentation]    Klik tombol "Save" pada popup Detail Email (masih di dalam iframe
-    ...                PopUp) untuk menyimpan perubahan, verifikasi alert konfirmasi, lalu
-    ...                KEMBALI ke frame Dashboard -- karena popup ini otomatis tertutup
-    ...                setelah Save, dan langkah selanjutnya (Click Email Count Link) perlu
-    ...                mengakses grid Account yang ada di level Dashboard, bukan di iframe ini.
+    ...                PopUp) untuk menyimpan perubahan, verifikasi alert konfirmasi, ambil
+    ...                screenshot sebagai bukti, lalu KEMBALI ke frame Dashboard -- karena
+    ...                popup ini otomatis tertutup setelah Save, dan langkah selanjutnya
+    ...                (Click Email Count Link) perlu mengakses grid Account yang ada di level
+    ...                Dashboard, bukan di iframe ini.
     Wait Until Element Is Visible    ${BTN_SAVE_EMAIL}    ${TIMEOUT}
     Click Element    ${BTN_SAVE_EMAIL}
     Alert Should Be Present    text=Are you sure you want to save changes?    timeout=${TIMEOUT}
+    Take Timestamped Screenshot    save_email_changes
     Switch To Dashboard Frame
 
 Submit Changes For Approval
@@ -201,13 +206,37 @@ Submit Changes For Approval
     ...                dalam popup Email) untuk mengirim perubahan ke approval. Muncul 2 alert
     ...                berurutan: alert pertama konfirmasi submit (teks belum diverifikasi,
     ...                masih di-accept generik), alert kedua pesan sukses "Update successfully
-    ...                processed to approval" yang divalidasi teksnya.
-    ...                Catatan: TIDAK pakai Scroll Element Into View -- sempat dicoba tapi
-    ...                menyebabkan MoveTargetOutOfBoundsException (bug geckodriver saat
-    ...                menghitung posisi scroll). Tidak diperlukan juga karena kliknya lewat
-    ...                JavaScript (element.click()), yang tidak butuh elemen berada dalam
-    ...                viewport seperti klik native Selenium.
+    ...                processed to approval" yang divalidasi teksnya, lalu ambil screenshot
+    ...                sebagai bukti hasil akhir.
+    ...                Catatan: elemen ini butuh di-scroll dulu supaya visible (kemungkinan
+    ...                lazy-render/CSS yang baru aktif saat masuk viewport). Scroll-nya pakai
+    ...                JavaScript (element.scrollIntoView()), BUKAN "Scroll Element Into View"
+    ...                bawaan Selenium -- yang itu sempat menyebabkan
+    ...                MoveTargetOutOfBoundsException (native mouse-move action Selenium/
+    ...                geckodriver salah hitung posisi viewport).
+    ${element}=    Get WebElement    ${BTN_SUBMIT_CHANGES}
+    Execute Javascript    arguments[0].scrollIntoView(true);    ARGUMENTS    ${element}
     Wait Until Element Is Visible    ${BTN_SUBMIT_CHANGES}    ${TIMEOUT}
     Klik Elemen Dengan Javascript    ${BTN_SUBMIT_CHANGES}
     Handle Alert    action=ACCEPT    timeout=${TIMEOUT}
     Alert Should Be Present    text=Update successfully processed to approval    timeout=${TIMEOUT}
+    Take Timestamped Screenshot    submit_changes_success
+
+Verify Email Format Invalid
+    [Documentation]    Memverifikasi validasi client-side "* Invalid format" muncul pada baris
+    ...                New Email paling akhir, ditandai icon warning kuning + tooltip, lalu
+    ...                ambil screenshot sebagai bukti validasi ter-trigger. 
+    Wait Until Element Is Visible    ${EMAIL_VALIDATION_MSG_LAST_ROW}    ${TIMEOUT}
+    ${title}=    Get Element Attribute    ${EMAIL_VALIDATION_MSG_LAST_ROW}    title
+    Should Contain    ${title}    Invalid format
+    Take Timestamped Screenshot    email_format_invalid
+
+Take Timestamped Screenshot
+    [Documentation]    Ambil screenshot dengan nama file mengandung Test Name + label + timestamp,
+    ...                disimpan di ${SCREENSHOT_DIR} -- folder yang sama dipakai semua screenshot
+    ...                di suite ini (pola sama seperti login_success/login_failed di Login.resource).
+    [Arguments]    ${label}
+    ${timestamp}=    Get Timestamp
+    Create Directory    ${SCREENSHOT_DIR}
+    ScreenCapLibrary.Set Screenshot Directory    ${SCREENSHOT_DIR}
+    ScreenCapLibrary.Take Screenshot    ${TEST NAME}_${label}_${timestamp}
