@@ -89,6 +89,12 @@ Go To Customer Maintenance
     [Documentation]    Navigasi ke halaman Customer > Maintenance. Selalu diawali balik ke
     ...                Dashboard dulu (lihat "Kembali Ke Dashboard") supaya konsisten baik
     ...                dipanggil dari state awal maupun dari state sisa test case sebelumnya.
+    ...                "Set Selenium Speed" ditaruh di sini supaya SEMUA aksi (klik, input
+    ...                text, dll) di seluruh resource ini otomatis dikasih jeda -- membantu
+    ...                elemen yang butuh waktu render/AJAX postback (RadControls) selesai
+    ...                dulu sebelum aksi berikutnya, tanpa perlu nambah Sleep manual di tiap
+    ...                keyword satu-satu.
+    Set Selenium Speed    0.5s
     Kembali Ke Dashboard
     Open Customer Menu
     Click Element    ${MENU_CUSTOMER_MAINTENANCE}
@@ -181,11 +187,25 @@ Tambah Email Baru
     ...                Urutan checkbox-dulu-baru-input WAJIB, karena textbox New Email disabled
     ...                sampai checkbox-nya dicentang (lihat onclick="checkItem(this);" di
     ...                checkbox-nya).
+    ...                Catatan: seluruh langkah setelah "Add New Email Row" dibungkus
+    ...                "Wait Until Keyword Succeeds" -- RadGrid Telerik ini AJAX postback-nya
+    ...                bisa lebih dari 1 tahap render, jadi walau jumlah baris sudah bertambah
+    ...                (dicek "Jumlah Baris Email Bertambah"), DOM-nya masih bisa berubah lagi
+    ...                sesaat kemudian, bikin locator [last()] sempat "not found" kalau kita
+    ...                langsung Input Text tepat di celah re-render itu.
     [Arguments]    ${new_email}
     Add New Email Row
-    Wait Until Element Is Visible    ${CHECKBOX_EMAIL_LAST_ROW}    ${TIMEOUT}
+    Wait Until Keyword Succeeds    ${TIMEOUT}    0.5s
+    ...    Centang Checkbox Dan Isi Email Baris Terakhir    ${new_email}
+
+Centang Checkbox Dan Isi Email Baris Terakhir
+    [Documentation]    Helper: centang checkbox + isi New Email di baris terakhir grid Email.
+    ...                Dipakai oleh "Tambah Email Baru", dibungkus retry karena rawan kena
+    ...                celah re-render RadGrid (lihat dokumentasi "Tambah Email Baru").
+    [Arguments]    ${new_email}
+    Wait Until Element Is Visible    ${CHECKBOX_EMAIL_LAST_ROW}    3s
     Select Checkbox    ${CHECKBOX_EMAIL_LAST_ROW}
-    Wait Until Element Is Enabled    ${INPUT_NEW_EMAIL_LAST_ROW}    ${TIMEOUT}
+    Wait Until Element Is Enabled    ${INPUT_NEW_EMAIL_LAST_ROW}    3s
     Input Text    ${INPUT_NEW_EMAIL_LAST_ROW}    ${new_email}
 
 Save Email Changes
@@ -225,7 +245,13 @@ Submit Changes For Approval
 Verify Email Format Invalid
     [Documentation]    Memverifikasi validasi client-side "* Invalid format" muncul pada baris
     ...                New Email paling akhir, ditandai icon warning kuning + tooltip, lalu
-    ...                ambil screenshot sebagai bukti validasi ter-trigger. 
+    ...                ambil screenshot sebagai bukti validasi ter-trigger.
+    ...                PENTING: "Press Keys ... TAB" wajib dipanggil sebelum cek visibility --
+    ...                validator ASP.NET/Telerik ini biasanya baru ter-trigger saat field
+    ...                kehilangan fokus (event onblur), bukan langsung setelah Input Text.
+    ...                Tanpa blur ini, validasi gak pernah muncul dan Wait Until Element Is
+    ...                Visible bakal timeout walau input-nya memang invalid.
+    Press Keys    ${INPUT_NEW_EMAIL_LAST_ROW}    TAB
     Wait Until Element Is Visible    ${EMAIL_VALIDATION_MSG_LAST_ROW}    ${TIMEOUT}
     ${title}=    Get Element Attribute    ${EMAIL_VALIDATION_MSG_LAST_ROW}    title
     Should Contain    ${title}    Invalid format
